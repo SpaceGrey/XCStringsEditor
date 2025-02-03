@@ -177,16 +177,13 @@ struct ContentView: View {
                             }
                         }
                         .frame(minWidth: 160)
-                        if showAuxLanguage {
                             Picker("Aux Language",selection:$appModel.auxLanguage){
                                 Text("Choose Aux Language").tag(nil as Language?)
                                 ForEach(appModel.languages.filter{$0 != appModel.currentLanguage && $0 != appModel.baseLanguage}) { language in
                                     Text(language.localizedName)
                                         .tag(language)
                                 }
-                            }
                             .frame(minWidth: 160)
-                            .popoverTip(tip)
                         }
                         
                         Spacer()
@@ -273,15 +270,7 @@ struct ContentView: View {
         } // NavigationStack
         .modifier(ActivityIndicatorModifier(isPresented: $appModel.isLoading))
         .task(id:appModel.auxLanguage){
-            columnCustomization[visibility: auxLanguage] = (appModel.auxLanguage != nil && translateService == .llm)  ? .visible : .hidden
-        }
-        .task(id:translateService){
-            if translateService != .llm {
-                showAuxLanguage = false
-                appModel.auxLanguage = nil
-            } else {
-                showAuxLanguage = true
-            }
+            columnCustomization[visibility: auxLanguage] = (appModel.auxLanguage != nil)  ? .visible : .hidden
         }
     }
     

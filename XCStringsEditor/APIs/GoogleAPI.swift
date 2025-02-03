@@ -60,15 +60,29 @@ enum GoogleAPI: API {
     var parameters: [URLQueryItem] {
         switch self {
         case .translate(let input,let apiKey):
-            return [
-                URLQueryItem(name: "key", value: apiKey),
-                URLQueryItem(name: "q", value: input.text),
-                URLQueryItem(name: "source", value: input.source),
-                URLQueryItem(name: "target", value: input.target),
-                URLQueryItem(name: "format", value: input.format),
-                URLQueryItem(name: "model", value: input.model)
+            if let aux = input.auxText,let auxSource = input.auxSource, !aux.isEmpty {
+                return [
+                    URLQueryItem(name: "key", value: apiKey),
+                    URLQueryItem(name: "q", value: aux),
+                    URLQueryItem(name: "source", value: auxSource),
+                    URLQueryItem(name: "target", value: input.target),
+                    URLQueryItem(name: "format", value: input.format),
+                    URLQueryItem(name: "model", value: input.model)
+                    
+                ]
                 
-            ]
+            } else {
+                
+                return [
+                    URLQueryItem(name: "key", value: apiKey),
+                    URLQueryItem(name: "q", value: input.text),
+                    URLQueryItem(name: "source", value: input.source),
+                    URLQueryItem(name: "target", value: input.target),
+                    URLQueryItem(name: "format", value: input.format),
+                    URLQueryItem(name: "model", value: input.model)
+                    
+                ]
+            }
         case .detect(let text,let apiKey):
             return [
                 URLQueryItem(name: "key", value: apiKey),
