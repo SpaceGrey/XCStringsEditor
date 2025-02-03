@@ -6,7 +6,7 @@
 //
 
 import AppKit
-
+import TipKit
 extension Notification.Name {
     static let receivedOpenURLsNotification = Notification.Name("ReceivedOpenURLsNotification")
 }
@@ -18,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let window = NSApplication.shared.windows.first {
             window.delegate = windowDelegate
         }
+        try? Tips.configure([.displayFrequency(.immediate)])
     }
     
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

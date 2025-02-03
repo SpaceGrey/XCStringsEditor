@@ -83,7 +83,7 @@ enum LLMAPI: API {
     private var message: [Any] {
         switch self {
         case .translate(let input, _, _, _, _):
-            if let auxText = input.auxText, let auxSource = input.auxSource {
+            if let auxText = input.auxText, let auxSource = input.auxSource,!auxText.isEmpty {
                 let script = [
                     [
                     "content":

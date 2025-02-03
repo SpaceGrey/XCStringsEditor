@@ -44,7 +44,7 @@ struct ContentView: View {
     @SceneStorage("TableConfig")
     private var columnCustomization: TableColumnCustomization<LocalizeItem>
     let auxLanguage = "AuxLanguage"
-    
+    let tip = AuxLanguageTip()
 //    init() {
 //        #if DEBUG
 //        logger.debug("init ContentView")
@@ -186,6 +186,7 @@ struct ContentView: View {
                                 }
                             }
                             .frame(minWidth: 160)
+                            .popoverTip(tip)
                         }
                         
                         Spacer()

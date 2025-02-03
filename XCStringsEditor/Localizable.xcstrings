@@ -433,6 +433,9 @@
     "Save and Open" : {
 
     },
+    "Select an Auxiliary Language" : {
+
+    },
     "Show \"Don't Translate\" Items" : {
 
     },
@@ -515,6 +518,9 @@
 
     },
     "XCStringsEditor" : {
+
+    },
+    "You can select an auxiliary language translation and input with your default localization into the LLM to get a better result. " : {
 
     },
     "You have unsaved changes. Do you want to save your changes before opening a new file?" : {
