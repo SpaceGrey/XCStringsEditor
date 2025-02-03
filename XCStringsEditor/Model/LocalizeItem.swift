@@ -40,6 +40,8 @@ struct LocalizeItem: Identifiable, Hashable, CustomStringConvertible {
     var sourceString: String
     var comment: String?
     
+    var auxTranslation:String? = nil
+    
     var language: Language
     var translation: String?
     var reverseTranslation: String?

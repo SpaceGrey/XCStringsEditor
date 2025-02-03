@@ -83,13 +83,41 @@ enum LLMAPI: API {
     private var message: [Any] {
         switch self {
         case .translate(let input, _, _, _, _):
-            return [
-                [
+            if let auxText = input.auxText, let auxSource = input.auxSource {
+                let script = [
+                    [
                     "content":
-                        "You are a professional translator, translate \"\(input.text)\" in language \(input.source) to language \(input.target), you should not output other than the translated text. ",
-                    "role": "user",
+                            """
+                        You are a bilingual translator. You are given two texts representing the same meaning in two different languages. Your task is to understand both languages and generate a translation to a third language. and you need to ensure that the translation accurately represents the meaning, while preserving the context and intent. 
+                        The format of input will be:
+                        
+                        #Language Code1# : #Script1#
+                        #Language Code2# : #Script2#
+                        Target Language Code : #Language#
+                        
+                        You should not output other than the translated text in target language.
+                        """,
+                        "role": "system",
+                    ],
+                    ["content":"""
+                        \(input.source) : \(input.text)
+                        \(auxSource) : \(auxText)
+                        Target Language Code : \(input.target)
+                    """,
+                    "role": "user"
+                    ]
                 ]
-            ]
+                print(script)
+                return script
+            } else {
+                return [
+                    [
+                        "content":
+                            "You are a professional translator, translate \"\(input.text)\" in language \(input.source) to language \(input.target), you should not output other than the translated text. ",
+                        "role": "user",
+                    ]
+                ]
+            }
         case .detect(let text, _, _, _, _):
             return [
                 [

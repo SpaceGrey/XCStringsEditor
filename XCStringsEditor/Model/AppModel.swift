@@ -9,6 +9,7 @@ import Foundation
 import Combine
 import AppKit
 import OSLog
+import SwiftUI
 
 fileprivate let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AppModel")
 
@@ -51,10 +52,19 @@ class AppModel {
     private(set) var allLocalizeItems: [LocalizeItem] = []
     private(set) var localizeItems: [LocalizeItem] = []
     var baseLanguage: Language = .english
+    var auxLanguage:Language? = nil{
+        didSet{
+            if auxLanguage != oldValue {
+                reloadData()
+            }
+        }
+    }
     var currentLanguage: Language = .english {
         didSet {
             selected.removeAll()
-            
+            if auxLanguage == currentLanguage {
+                auxLanguage = nil
+            }
             reloadData()
             
             settings.lastLanguage = currentLanguage.code
@@ -346,110 +356,124 @@ class AppModel {
 
     private func filteredItems() -> [LocalizeItem] {
         // TODO: filter sub items
+        func getFilter(language:Language)->((LocalizeItem)->Bool){
+            return { [self] in
+                if $0.language != language {
+                    return false
+                }
+                
+                if dontTranslateItemsHidden == true && $0.shouldTranslate == false {
+                    return false
+                }
+                if translateLaterItemsHidden == true && $0.translateLater {
+                    return false
+                }
+                if staleItemsHidden == true && $0.isStale {
+                    return false
+                }
+                
+                // filter
+                if filter.new == true {
+                    if $0.contains(matching: { item in item.translation == nil }) == false {
+                        return false
+                    }
+                }
 
+                switch filter.translated {
+                case 1:
+                    if $0.contains(matching: { item in item.translation == nil }) {
+                        return false
+                    }
+                case 2:
+                    if $0.contains(matching: { item in item.translation != nil }) {
+                        return false
+                    }
+                default:
+                    break
+                }
+                
+                switch filter.translationQuality {
+                case 1:
+                    return $0.reverseTranslation == nil
+                case 2:
+                    return $0.reverseTranslation != nil
+                    && $0.translationStatus == .different
+                case 3:
+                    return $0.reverseTranslation != nil
+                    && $0.translationStatus == .similar
+                case 4:
+                    return $0.reverseTranslation != nil
+                    && $0.translationStatus == .exact
+                default:
+                    break
+                }
+
+                if filter.modified == true {
+                    if $0.contains(matching: { item in item.isModified == true }) == false {
+                        return false
+                    }
+                }
+                
+                if filter.needsReview == true {
+                    if $0.contains(matching: { item in item.needsReview == true }) == false {
+                        return false
+                    }
+                }
+                
+                if filter.needsWork == true {
+                    if $0.contains(matching: { item in item.needsWork == true }) == false {
+                        return false
+                    }
+                }
+                
+                if filter.translateLater == true {
+                    if $0.contains(matching: { item in item.translateLater == true }) == false {
+                        return false
+                    }
+                }
+                
+                if filter.sourceEqualTranslation == true {
+                    if $0.contains(matching: { item in item.sourceString == item.translation }) == false {
+                        return false
+                    }
+                }
+
+                // search text
+                if self.searchText.isEmpty == false {
+                    let text = self.searchText.lowercased()
+                    var filtered = false
+                    if $0.translation?.lowercased().contains(text) == true || $0.sourceString.lowercased().contains(text) == true {
+                        filtered = true
+                    } else if let children = $0.children {
+                        filtered = children.contains { $0.translation?.lowercased().contains(text) == true }
+                    }
+                    if filtered == false {
+                        return false
+                    }
+                }
+                
+                return true
+            }
+        }
+        
         if isModified {
             updateAllLocalizedItems()
         }
-        
-        return allLocalizeItems.filter {
-            if $0.language != currentLanguage {
-                return false
-            }
-            
-            if dontTranslateItemsHidden == true && $0.shouldTranslate == false {
-                return false
-            }
-            if translateLaterItemsHidden == true && $0.translateLater {
-                return false
-            }
-            if staleItemsHidden == true && $0.isStale {
-                return false
-            }
-            
-            // filter
-            if filter.new == true {
-                if $0.contains(matching: { item in item.translation == nil }) == false {
-                    return false
+        let innerSortOrder = [KeyPathComparator<LocalizeItem>(\.key, order: .forward)]
+        var filtered = allLocalizeItems.filter(getFilter(language: currentLanguage))
+            .sorted(using:innerSortOrder)
+        if let aux = auxLanguage {
+            let auxItems = allLocalizeItems.filter(getFilter(language: aux)).sorted(using: innerSortOrder)
+            if auxItems.count == filtered.count{
+                for i in filtered.indices {
+                    //print("\(filtered[i].sourceString) -> \(auxItems[i].translation)")
+                    filtered[i].auxTranslation = auxItems[i].translation
                 }
             }
-
-            switch filter.translated {
-            case 1:
-                if $0.contains(matching: { item in item.translation == nil }) {
-                    return false
-                }
-            case 2:
-                if $0.contains(matching: { item in item.translation != nil }) {
-                    return false
-                }
-            default:
-                break
-            }
-            
-            switch filter.translationQuality {
-            case 1:
-                return $0.reverseTranslation == nil
-            case 2:
-                return $0.reverseTranslation != nil
-                && $0.translationStatus == .different
-            case 3:
-                return $0.reverseTranslation != nil
-                && $0.translationStatus == .similar
-            case 4:
-                return $0.reverseTranslation != nil
-                && $0.translationStatus == .exact
-            default:
-                break
-            }
-
-            if filter.modified == true {
-                if $0.contains(matching: { item in item.isModified == true }) == false {
-                    return false
-                }
-            }
-            
-            if filter.needsReview == true {
-                if $0.contains(matching: { item in item.needsReview == true }) == false {
-                    return false
-                }
-            }
-            
-            if filter.needsWork == true {
-                if $0.contains(matching: { item in item.needsWork == true }) == false {
-                    return false
-                }
-            }
-            
-            if filter.translateLater == true {
-                if $0.contains(matching: { item in item.translateLater == true }) == false {
-                    return false
-                }
-            }
-            
-            if filter.sourceEqualTranslation == true {
-                if $0.contains(matching: { item in item.sourceString == item.translation }) == false {
-                    return false
-                }
-            }
-
-            // search text
-            if self.searchText.isEmpty == false {
-                let text = self.searchText.lowercased()
-                var filtered = false
-                if $0.translation?.lowercased().contains(text) == true || $0.sourceString.lowercased().contains(text) == true {
-                    filtered = true
-                } else if let children = $0.children {
-                    filtered = children.contains { $0.translation?.lowercased().contains(text) == true }
-                }
-                if filtered == false {
-                    return false
-                }
-            }
-            
-            return true
         }
-        .sorted(using: sortOrder)
-
+        return filtered.sorted(using: sortOrder)
+        
+        
     }
     
     func reloadData() {
@@ -863,7 +887,9 @@ class AppModel {
                 let language = item.language
                 do {
                     // Perform translation from source to target language
-                    translation = try await self.translator.translate(.init(text: item.sourceString, source: sourceLanguage.code, target: language.code))
+                    translation = try await self.translator.translate(
+                        .init(sourceLanguage: sourceLanguage.code, auxLanguage: auxLanguage?.code, item: item)
+                    )
                     if let translation {
                         // Perform reverse translation from target back to source language
                         reverseTranslation = try await self.translator.translate(.init(text: translation, source: language.code, target: sourceLanguage.code))

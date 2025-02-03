@@ -33,13 +33,17 @@ struct ContentView: View {
     
     @Environment(AppModel.self) private var appModel
     @Environment(WindowDelegate.self) private var windowDelegate
-    
+    @AppStorage(UserDefaults.Keys.translationService) var translateService: TranslateService = .google
+
     @State private var translation: String = ""
     @State private var isEditing: Bool = false
     @State private var nextEditingItem: LocalizeItem?
     @FocusState private var focusedField: Field?
     @State private var showConfirmClose: Bool = false
-    
+    @State private var showAuxLanguage: Bool = false
+    @SceneStorage("TableConfig")
+    private var columnCustomization: TableColumnCustomization<LocalizeItem>
+    let auxLanguage = "AuxLanguage"
     
 //    init() {
 //        #if DEBUG
@@ -51,7 +55,7 @@ struct ContentView: View {
         @Bindable var appModel = appModel
 
         NavigationStack {
-            Table(selection: $appModel.selected, sortOrder: $appModel.sortOrder) {
+            Table(selection: $appModel.selected, sortOrder: $appModel.sortOrder,columnCustomization:$columnCustomization) {
                 // Key
                 TableColumn("Key", value: \.key) { item in
                     keyColumnView(item: item)
@@ -62,6 +66,11 @@ struct ContentView: View {
                 TableColumn("Default Localization (\(appModel.baseLanguage.code))") { item in
                     sourceColumnView(item: item)
                 }
+                TableColumn("Aux Language") { item in
+                    auxTranslationColumnView(item: item)
+                }
+                .customizationID(auxLanguage)
+                
 
                 // Translation
                 TableColumn(appModel.currentLanguage.localizedName) { item in
@@ -168,6 +177,16 @@ struct ContentView: View {
                             }
                         }
                         .frame(minWidth: 160)
+                        if showAuxLanguage {
+                            Picker("Aux Language",selection:$appModel.auxLanguage){
+                                Text("Choose Aux Language").tag(nil as Language?)
+                                ForEach(appModel.languages.filter{$0 != appModel.currentLanguage && $0 != appModel.baseLanguage}) { language in
+                                    Text(language.localizedName)
+                                        .tag(language)
+                                }
+                            }
+                            .frame(minWidth: 160)
+                        }
                         
                         Spacer()
                         
@@ -208,6 +227,8 @@ struct ContentView: View {
                             Label("Filter", systemImage: appModel.filter.hasOn ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                         }
                         .menuIndicator(.hidden)
+                        
+                        
                     }
                 }
                     
@@ -250,6 +271,17 @@ struct ContentView: View {
             
         } // NavigationStack
         .modifier(ActivityIndicatorModifier(isPresented: $appModel.isLoading))
+        .task(id:appModel.auxLanguage){
+            columnCustomization[visibility: auxLanguage] = (appModel.auxLanguage != nil && translateService == .llm)  ? .visible : .hidden
+        }
+        .task(id:translateService){
+            if translateService != .llm {
+                showAuxLanguage = false
+                appModel.auxLanguage = nil
+            } else {
+                showAuxLanguage = true
+            }
+        }
     }
     
     private func endEditing(updateTranslation: Bool = true) {
@@ -293,6 +325,13 @@ struct ContentView: View {
     
     private func sourceColumnView(item: LocalizeItem) -> some View {
         Text(item.sourceString)
+            .lineLimit(nil)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .foregroundStyle(item.translateLater || item.shouldTranslate == false ? .secondary : .primary)
+    }
+    private func auxTranslationColumnView(item: LocalizeItem) -> some View {
+        Text(item.auxTranslation ?? "")
             .lineLimit(nil)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)

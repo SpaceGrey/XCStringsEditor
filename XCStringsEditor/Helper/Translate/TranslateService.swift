@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum TranslateService: String, CaseIterable, Identifiable, CustomStringConvertible {
+enum TranslateService: String, CaseIterable, Identifiable, CustomStringConvertible,Equatable {
     case google
     case deepL
     case baidu
